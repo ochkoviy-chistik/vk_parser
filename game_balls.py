@@ -32,7 +32,7 @@ def is_intersect(circle1=None, circle2=None):
 class Smile:
     radius = 50//2
 
-    def __init__(self, screen, speed=2):
+    def __init__(self, screen, speed=1):
         self.screen = screen
         self.x, self.y = randint(self.radius, width - self.radius), randint(self.radius, height - self.radius)
         self.div = speed
@@ -41,8 +41,17 @@ class Smile:
 
     def moving(self, cords=None):
         if cords is not None:
-            self.x_div = cords[0] / width * self.div
-            self.y_div = cords[1] / height * self.div
+            try:
+                k_x = math.log(abs(cords[0]), 100) if cords[0] > 0 else -math.log(abs(cords[0]), 100)
+            except ValueError:
+                k_x = 0
+            try:
+                k_y = math.log(abs(cords[1]), 100) if cords[1] > 0 else -math.log(abs(cords[1]), 100)
+            except ValueError:
+                k_y = 0
+
+            self.x_div = k_x * self.div
+            self.y_div = k_y * self.div
 
             # if math.cos(angle)
 
@@ -143,24 +152,26 @@ def main():
 
     game_over = False
     smiles = []
-    n = 5
+    n = 8
     for i in range(n):
-        smiles.append(Smile(screen, randint(3, 4)))
+        smiles.append(Smile(screen, randint(1, 2)))
 
-    lifes = [
-        Life(screen, 775, 25),
-        Life(screen, 775, 50),
-        Life(screen, 775, 75)
-    ]
+    lives = [Life(screen, 775, 25*i) for i in range(1, 6)]
 
-    count = 2
-    flag = False
+    font = pygame.font.SysFont("Comic Sans MS", 72, True)
+    text_game_over = font.render("Game over!", True, (255, 255, 255))
+
+    count = len(lives)-1
+    inv_flag = True
+    game_over_flag = False
     player = Player(screen)
 
-    time = 1500
+    dash_time = 1000
+    inv_time = 1500
     pygame.time.set_timer(pygame.USEREVENT, 1)
-    
-    timer = 0
+
+    dash_timer = 1500
+    inv_timer = 0
     stamina = Stamina(screen, 770, 575, [20, 20])
 
     while not game_over:
@@ -169,11 +180,13 @@ def main():
             if event.type == pygame.QUIT:
                 game_over = True
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE and timer >= time:
+                if event.key == pygame.K_SPACE and dash_timer >= dash_time:
                     dash_flag = True
-                    timer = 0
+                    dash_timer = 0
             if event.type == pygame.USEREVENT:
-                timer += 1
+                dash_timer += 1
+                if inv_flag:
+                    inv_timer += 1
 
         keys = pygame.key.get_pressed()
 
@@ -197,13 +210,19 @@ def main():
             if dash_flag:
                 player.dash(y=-200)
                 # dash_flag = False
-        dash_flag = False
 
         screen.fill(background_color)
 
-        if timer < time:
-            stamina.moving(timer / time * 2 * math.pi)
-        if timer >= time:
+        if game_over_flag:
+            start = pygame.time.get_ticks()
+            while True:
+                if (pygame.time.get_ticks() - start) / 1000 > 2:
+                    break
+            sys.exit()
+
+        if dash_timer < dash_time:
+            stamina.moving(dash_timer / dash_time * 2 * math.pi)
+        if dash_timer >= dash_time:
             stamina.moving(2 * math.pi)
 
         for smile in smiles:
@@ -212,30 +231,30 @@ def main():
         player.moving()
         # print(player.get_cords())
 
-        for life in lifes:
+        for life in lives:
             life.draw()
 
         for i in range(len(smiles)):
             for j in range(i+1, len(smiles)):
                 if is_intersect(smiles[i], smiles[j]):
+                    smiles.remove(smiles[j])
                     smiles.remove(smiles[i])
-                    smiles.append(Smile(screen, randint(3, 4)))
+                    smiles.append(Smile(screen, randint(1, 2)))
+                    smiles.append(Smile(screen, randint(1, 2)))
 
         for smile in smiles:
-            if is_intersect(smile, player) and not flag:
-                lifes[count].lose()
+            if is_intersect(smile, player) and not inv_flag:
+                lives[count].lose()
                 count -= 1
-                flag = True
-                start_ticks = pygame.time.get_ticks()
+                inv_flag = True
 
-        if flag:
-            seconds = (pygame.time.get_ticks() - start_ticks) / 1000
-
-            if seconds > 1:
-                flag = False
+        if inv_flag and inv_timer >= inv_time:
+            inv_flag = False
+            inv_timer = 0
 
         if count <= -1:
-            sys.exit()
+            screen.blit(text_game_over, (width // 2 - 175, height // 2 - 25))
+            game_over_flag = True
 
         pygame.display.flip()
         pygame.time.wait(10)
