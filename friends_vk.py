@@ -1,6 +1,7 @@
 import requests
 import json
 from marked import main as mark
+import pandas as pd
 
 # https://oauth.vk.com/authorize?client_id=51435525&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=friends&response_type=token&v=5.131
 
@@ -74,6 +75,14 @@ def main():
     with open('marked.json', 'r') as f:
         s = json.load(f)
 
+    data = {
+        'full_name': [],
+        'is_open': [],
+        'screen_name': [],
+        'id': [],
+        'schools': []
+    }
+
     for i in friends_list:
         schools = []
         if 'deactivated' not in i.keys():
@@ -94,9 +103,24 @@ def main():
                             marked = Color(i['last_name'] + ' ' + i['first_name']).blue()
                     else:
                         marked = Color(i['last_name'] + ' ' + i['first_name']).string
-                    print('{}. [https://vk.com/{} - {}] {} - [{}] - {}'.format(count, i['screen_name'], Color('Закрытый').red() if i['is_closed'] else Color('Открытый').green(),
-                         marked, schools, i['id']))
+                    # print('{}. [https://vk.com/{} - {}] {} - [{}] - {}'.format(count, i['screen_name'], Color('Закрытый').red() if i['is_closed'] else Color('Открытый').green(),
+                    #     marked, schools, i['id']))
+
+                    data['full_name'].append(marked)
+                    data['is_open'].append(Color('Закрытый').red() if i['is_closed'] else Color('Открытый').green())
+                    data['screen_name'].append('https://vk.com/'+i['screen_name'])
+                    data['id'].append(i['id'])
+                    data['schools'].append(schools)
+
                     count+=1
+
+    df = pd.DataFrame(data)
+
+    with open('table.html', 'w') as table:
+        table.writelines('<meta charset="UTF-8">\n')
+        table.write(df.to_html())
+
+
 
 if __name__ == '__main__':
     main()
