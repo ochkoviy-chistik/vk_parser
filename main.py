@@ -1,64 +1,48 @@
-import math
-import pygame, sys
-from random import randint
+import requests
+import networkx as nx
+import matplotlib.pyplot as plt
 
-size = width, height = 800, 600
-background_color = 255, 255, 255
+# nVuts2gGgNYmXX7esbRb
+# 3b49eb533b49eb533b49eb53a13859335633b493b49eb5358781df12623abddaabc4d40
 
-def main():
-    pygame.init()
-    screen = pygame.display.set_mode(size)
-
-    game_over = False
-    ball = pygame.image.load('ball.png')
-    ball_rect = ball.get_rect()
-
-    x = y = 4
-
-    rect_x = 0
-    ball_rect.x = randint(0, 800-100)
-    ball_rect.y = randint(0, 600-100)
-
-    while not game_over:
-        for event in pygame.event.get():
-            keys = pygame.key.get_pressed()
-            if event.type == pygame.QUIT:
-                game_over = True
-
-        screen.fill(background_color)
-
-        if keys[pygame.K_d] and rect_x < 300:
-            rect_x += 5
-        if keys[pygame.K_a] and rect_x > -300:
-            rect_x -= 5
+address = 'https://api.vk.com/method/{}'.format('friends.get')
+key = '3b49eb533b49eb533b49eb53a13859335633b493b49eb5358781df12623abddaabc4d40'
 
 
-        ball_rect.x += x
-        ball_rect.y += y
+def my_request(friends_id):
+    response = requests.get(
+        url=address, params={
+            'user_id': friends_id,
+            'access_token': key,
+            'fields': 'nickname',
+            'v': 5.131
+        }
+    ).json()['response']['items']
 
-        if ball_rect.x > width-100:
-            x *= -1
-        if ball_rect.x < 0:
-            x *= -1
-        if ball_rect.y > height-100:
-            y *= -1
-        if ball_rect.y < 0:
-            y *= -1
+    friends_dict = {i['id']: i['last_name']+' '+i['first_name'] for i in response}
 
-        platform = pygame.draw.rect(screen, (0, 0, 0), (width // 2 - 100 + rect_x, height - 50, 200, 10))
-
-        if platform.colliderect(ball_rect):
-            # x *= -1
-            y *= -1
+    return friends_dict
 
 
-        screen.blit(ball, ball_rect)
+# print(my_request(523153163))
 
+friends_dict = {}
+friends_list = my_request(input())
 
-        pygame.time.wait(10)
-        pygame.display.flip()
-    sys.exit()
+for i in friends_list.keys():
+    try:
+        friends_dict[i] = my_request(i)
+    except:
+        pass
 
-if __name__ == '__main__':
-    main()
+graph = nx.Graph()
+graph.add_nodes_from(friends_list.values())
 
+for i in friends_list.keys():
+    if i in friends_dict.keys():
+        for j in friends_list.keys():
+            if j in friends_dict[i]:
+                graph.add_edge(friends_list[i], friends_list[j])
+
+nx.draw(graph, with_labels=True)
+plt.show()
