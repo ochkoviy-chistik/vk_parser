@@ -5,17 +5,20 @@ import matplotlib.pyplot as plt
 # nVuts2gGgNYmXX7esbRb
 # 3b49eb533b49eb533b49eb53a13859335633b493b49eb5358781df12623abddaabc4d40
 
-address = 'https://api.vk.com/method/{}'.format('friends.get')
+friends_address = 'https://api.vk.com/method/{}'.format('friends.get')
+users_address = 'https://api.vk.com/method/{}'.format('users.get')
+
 key = '3b49eb533b49eb533b49eb53a13859335633b493b49eb5358781df12623abddaabc4d40'
 
 
 def my_request(friends_id):
     response = requests.get(
-        url=address, params={
+        url=friends_address, params={
             'user_id': friends_id,
             'access_token': key,
             'fields': 'nickname',
-            'v': 5.131
+            'v': 5.131,
+            'lang': 'ru'
         }
     ).json()['response']['items']
 
@@ -27,7 +30,11 @@ def my_request(friends_id):
 # print(my_request(523153163))
 
 friends_dict = {}
-friends_list = my_request(input())
+friends_list = my_request(requests.get(url=users_address, params={
+                'access_token': key,
+                'user_ids': input(),
+                'v': 5.131
+            }).json()['response'][0]['id'])
 
 for i in friends_list.keys():
     try:
